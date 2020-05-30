@@ -1,49 +1,39 @@
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import {CreateNoteDto} from './dto/createNotesDto';
-
-const notes: Array<any> = [];
+import {NoteService} from './notes.service'; 
 
 @Controller('notes')
 export class NotesController {
+    constructor(private noteService: NoteService){}
    @Get()
    findAll() {
        return {
            message: 'Listing notes',
-           notes: notes
+           notes: this.noteService.findAll()
        }
    }
 
    @Get(':idstring')
    findOne(@Param() param): object {
         return {
-            message: `Found ${param.idstring}`
+            data: this.noteService.findOne(param.idstring)
         }
    }
 
    @Post('create')
    create(@Body() noteCreateDto: CreateNoteDto) {
-       return {
-           message: 'Saving Note',
-           name: noteCreateDto.name,
-           description: noteCreateDto.description,
-           idstring: noteCreateDto.idstring
-       }
+    return this.noteService.create(noteCreateDto)
    }
 
    @Put(':idstring')
    updateOne(@Param() params, @Body() updateDto: CreateNoteDto) {
-        return {
-            message: `Updating note ${params.idstring}`,
-            name: updateDto.name,
-            description: updateDto.description,
-            idstring: updateDto.idstring
-        }
+        return this.noteService.updateOne(params.idstring, updateDto);
    }
 
    @Delete(':idstring')
    findAndDelete(@Param() params) {
        return {
-           message: `Successfully deleted ${params.idstring}`
+           message: this.noteService.deleteOne(params.idstring)
        }
    }
 }
