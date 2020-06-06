@@ -1,45 +1,36 @@
 import {Injectable } from '@nestjs/common'
 import {CreateNoteDto} from './dto/createNotesDto';
+import {Model} from 'mongoose';
+import {InjectModel} from '@nestjs/mongoose';
+import {Note} from './schemas/note.schema';
+
 
 @Injectable()
 export class NoteService {
+    constructor(@InjectModel(Note.name) private noteModel: Model<Note>){}
     readonly notes: CreateNoteDto[] = []
-    create(note: CreateNoteDto){
-        const noteIndex = this.notes.find(item => item.name == note.name)
-        if(noteIndex == undefined) {
-            this.notes.push(note);
-            return {
-                message: "Note successfully added"
-            }
-        } else {
-            return {
-                message: "Note already exists",
-                statusCode: 400
-            }
-        }
+
+    create(note: CreateNoteDto): Promise<Note> {
+        note.slug = note.name.replace(/\s/g, "-").toLowerCase();
+        const createdNote = new this.noteModel(note);
+        return createdNote.save();
     }
 
-    findAll(): CreateNoteDto[] {
-        return this.notes;
+    findAll(): Promise<Note[]> {
+        return this.noteModel.find().exec();
     }
 
-    findOne(noteString) {
-       const note: CreateNoteDto = this.notes.find(item => item.idstring === noteString);
-       if(note == undefined) return {message: "Note could not be found"}
-       if(note != undefined) return {message: note}
+    findOne(slug): Promise<Note> {
+        return this.noteModel.findOne({
+            slug: slug
+        }).exec();
     }
 
-    deleteOne(notestring) {
-        if(this.notes.length) return this.notes.filter(note => note.idstring !=notestring); 
-        return "No notes to delete"
+    updateOne(id, data): Promise<Note> {
+        return this.noteModel.findByIdAndUpdate({_id: id}, data).exec()
     }
 
-    updateOne (noteString, updateBody ) {
-        const noteIndex = this.notes.findIndex(item => item.idstring == noteString);
-         if(noteIndex != -1){
-             this.notes[noteIndex] = {...updateBody}
-             return {message: "Updated successfully"}
-         } else {return {message: "Could not find a note"}}
-
+    deleteOne (id): Promise<Note> {
+        return this.noteModel.findByIdAndDelete({_id:id}).exec();
     }
 }

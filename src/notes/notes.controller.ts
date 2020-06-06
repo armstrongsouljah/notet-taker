@@ -1,22 +1,26 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
 import {CreateNoteDto} from './dto/createNotesDto';
-import {NoteService} from './notes.service'; 
+import {NoteService} from './notes.service';
+import {ConfigService} from '@nestjs/config';
 
 @Controller('notes')
 export class NotesController {
-    constructor(private noteService: NoteService){}
+    constructor(private noteService: NoteService, private configService: ConfigService){}
    @Get()
-   findAll() {
+   async findAll() {
+       
+       const notes = await this.noteService.findAll()
        return {
-           message: 'Listing notes',
-           notes: this.noteService.findAll()
+           notes
        }
    }
 
-   @Get(':idstring')
-   findOne(@Param() param): object {
+   @Get(':slug')
+   async findOne(@Param() param) {
+        const foundNote = await this.noteService.findOne(param.slug)
+        if(foundNote == null) throw new HttpException('Not Found', HttpStatus.NOT_FOUND)
         return {
-            data: this.noteService.findOne(param.idstring)
+            data: foundNote
         }
    }
 
@@ -25,15 +29,23 @@ export class NotesController {
     return this.noteService.create(noteCreateDto)
    }
 
-   @Put(':idstring')
-   updateOne(@Param() params, @Body() updateDto: CreateNoteDto) {
-        return this.noteService.updateOne(params.idstring, updateDto);
+   @Put(':slug')
+   async updateOne(@Param() params, @Body() updateDto: CreateNoteDto) {
+        const noteToUpdate = await this.noteService.findOne(params.slug)
+        if(noteToUpdate == null) throw new HttpException('Not Found', HttpStatus.NOT_FOUND)
+        return this.noteService.updateOne(noteToUpdate.id, updateDto);
    }
 
-   @Delete(':idstring')
-   findAndDelete(@Param() params) {
+   @Delete(':slug')
+   async findAndDelete(@Param() params) {
+       const noteToDelete = await this.noteService.findOne(params.slug);
+       if(noteToDelete == null) throw new HttpException('Not Found', HttpStatus.NOT_FOUND)
+
+       const deletedNote = await this.noteService.deleteOne(noteToDelete.id)
+       if(deletedNote == null) throw new HttpException('Not Found', HttpStatus.NOT_FOUND)
+
        return {
-           message: this.noteService.deleteOne(params.idstring)
+           message: "Noted deleted successfully"
        }
    }
 }
